@@ -137,30 +137,51 @@
     font-size: 25px; /* shrunk to fit by fitToBox() */
   }
 
-  .unscheduled-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 0.6em;
-    padding: 0.34em 0;
+  .unscheduled table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .unscheduled thead th {
+    text-align: left;
+    font-size: 0.56em;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 0 0 0.4em;
     border-bottom: 1px solid var(--rule);
   }
 
-  .unscheduled-item:last-child { border-bottom: 0; }
+  .unscheduled thead th.date { text-align: right; }
 
-  .unscheduled-name {
-    font-size: 1em;
-    line-height: 1.2;
+  .unscheduled tbody td {
+    padding: 0.34em 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: baseline;
   }
 
-  .unscheduled-meta {
-    flex: none;
+  .unscheduled tbody tr:last-child td { border-bottom: 0; }
+
+  .unscheduled td.item {
+    font-size: 1em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unscheduled td.date {
     font-size: 0.8em;
     color: var(--ink-soft);
     font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+    padding-left: 0.6em;
   }
 
-  .unscheduled-meta.due {
+  .unscheduled td.date.due {
     color: var(--urgent);
     font-weight: 700;
   }
@@ -782,30 +803,33 @@
       return;
     }
 
+    var table = document.createElement("table");
+    table.innerHTML =
+      "<colgroup><col style='width:56%'><col style='width:22%'><col style='width:22%'></colgroup>" +
+      "<thead><tr><th>Item</th><th class='date'>Created</th><th class='date'>Due</th></tr></thead>" +
+      "<tbody></tbody>";
+    var tbody = table.querySelector("tbody");
+
     items.forEach(function (t) {
       var due = parseDate(pick(t, "dueDate", "due"));
-      var meta, urgent = false;
+      var created = parseDate(pick(t, "createdAt", "created", "addedAt"));
 
-      if (due) {
-        var days = daysBetween(today, due);
-        urgent = true;
-        meta = days < 0 ? Math.abs(days) + "d overdue"
-             : days === 0 ? "due today"
-             : days === 1 ? "due tomorrow"
-             : "due in " + days + "d";
-      } else {
-        var created = parseDate(pick(t, "createdAt", "created", "addedAt"));
-        var age = created ? daysBetween(created, today) : null;
-        meta = age === null ? "" : age <= 0 ? "new" : age + "d old";
-      }
-
-      var row = document.createElement("div");
-      row.className = "unscheduled-item";
-      row.innerHTML = '<div class="unscheduled-name"></div><div class="unscheduled-meta' + (urgent ? " due" : "") + '"></div>';
-      row.firstChild.textContent = pick(t, "title", "name", "text") || "Untitled";
-      row.lastChild.textContent = meta;
-      box.appendChild(row);
+      var row = document.createElement("tr");
+      row.innerHTML =
+        '<td class="item"></td>' +
+        '<td class="date"></td>' +
+        '<td class="date' + (due ? " due" : "") + '"></td>';
+      row.cells[0].textContent = pick(t, "title", "name", "text") || "Untitled";
+      row.cells[1].textContent = created ? formatShortDate(created) : "–";
+      row.cells[2].textContent = due ? formatShortDate(due) : "–";
+      tbody.appendChild(row);
     });
+
+    box.appendChild(table);
+  }
+
+  function formatShortDate(d) {
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
 
   /* ---------- render: Week ---------- */
