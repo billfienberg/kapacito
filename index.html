@@ -812,7 +812,6 @@
 
   function renderWeek(now) {
     var today = startOfDay(now);
-    var weekStart = addDays(today, -today.getDay());
 
     var hours = document.getElementById("hours");
     hours.innerHTML = "";
@@ -830,13 +829,13 @@
     days.innerHTML = "";
 
     for (var i = 0; i < 7; i++) {
-      var date = addDays(weekStart, i);
+      var date = addDays(today, i);
       var col = document.createElement("div");
       col.className = "day" + (sameDay(date, today) ? " is-today" : "");
 
       var head = document.createElement("div");
       head.className = "day-head";
-      head.innerHTML = '<div class="day-name">' + DAY_NAMES[i] + '</div><div class="day-num">' + date.getDate() + "</div>";
+      head.innerHTML = '<div class="day-name">' + DAY_NAMES[date.getDay()] + '</div><div class="day-num">' + date.getDate() + "</div>";
       col.appendChild(head);
 
       var timed = timedBlocksFor(date);
