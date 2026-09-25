@@ -460,28 +460,42 @@
 
 <!-- ===================================================================
      DATA. Everything on screen is computed from these three arrays.
-     Replace the contents with the real tasks / recurring / milestones.
+     This is sample data - replace it with the real tasks / recurring /
+     milestones. See README.md for the fields each one reads.
      =================================================================== -->
 <script id="kapacito-data" type="application/json">
 {
   "tasks": [
-    { "id": "t1", "title": "PLACEHOLDER — sample scheduled task", "tag": "work",    "date": null, "time": "13:00", "duration": 60, "dueDate": null, "createdAt": "2026-09-10T09:00:00Z" },
-    { "id": "t2", "title": "PLACEHOLDER — task with a due date",   "tag": "personal","date": null, "time": null,    "duration": null, "dueDate": "2026-09-29", "createdAt": "2026-09-12T09:00:00Z" },
-    { "id": "t3", "title": "PLACEHOLDER — aging backlog task",     "tag": "work",    "date": null, "time": null,    "duration": null, "dueDate": null, "createdAt": "2026-08-14T09:00:00Z" },
-    { "id": "t4", "title": "PLACEHOLDER — one-off later this week","tag": "podcast", "date": null, "time": "16:00", "duration": 90, "dueDate": null, "createdAt": "2026-09-20T09:00:00Z" }
+    { "id": "t1",  "title": "Dentist appointment",   "tag": "personal", "date": "2026-09-25", "time": "15:00", "duration": 60, "dueDate": null, "createdAt": "2026-09-08T09:00:00Z" },
+    { "id": "t2",  "title": "Team retro",            "tag": "work",     "date": "2026-09-24", "time": "11:00", "duration": 45, "dueDate": null, "createdAt": "2026-09-15T09:00:00Z" },
+    { "id": "t3",  "title": "Renew car registration","tag": "errands",  "date": null, "time": null, "duration": null, "dueDate": "2026-09-30", "createdAt": "2026-09-02T09:00:00Z" },
+    { "id": "t4",  "title": "Book flights",          "tag": "personal", "date": null, "time": null, "duration": null, "dueDate": "2026-10-03", "createdAt": "2026-09-10T09:00:00Z" },
+    { "id": "t5",  "title": "File quarterly taxes",  "tag": "work",     "date": null, "time": null, "duration": null, "dueDate": "2026-10-15", "createdAt": "2026-09-01T09:00:00Z" },
+    { "id": "t6",  "title": "Draft the newsletter",  "tag": "work",     "date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-09-05T09:00:00Z" },
+    { "id": "t7",  "title": "Sort the podcast archive", "tag": "podcast","date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-09-18T09:00:00Z" },
+    { "id": "t8",  "title": "Replace the furnace filter", "tag": "errands","date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-09-12T09:00:00Z" },
+    { "id": "t9",  "title": "Plan the winter trip",  "tag": "personal", "date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-08-28T09:00:00Z" },
+    { "id": "t10", "title": "Clean out the garage",  "tag": "personal", "date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-08-02T09:00:00Z" },
+    { "id": "t11", "title": "Fix the fence gate",    "tag": "personal", "date": null, "time": null, "duration": null, "dueDate": null, "createdAt": "2026-07-20T09:00:00Z" }
   ],
   "recurring": [
-    { "id": "r1", "title": "PLACEHOLDER — Sleep",           "tag": "sleep",           "time": "23:00", "duration": 450, "days": "daily" },
-    { "id": "r2", "title": "PLACEHOLDER — Morning routine", "tag": "morning routine", "time": "07:00", "duration": 60,  "days": "daily" },
-    { "id": "r3", "title": "PLACEHOLDER — Dog walk",        "tag": "dogs",            "time": "08:15", "duration": 45,  "days": "daily" },
-    { "id": "r4", "title": "PLACEHOLDER — Work block",      "tag": "work",            "time": "09:30", "duration": 240, "days": "weekdays" },
-    { "id": "r5", "title": "PLACEHOLDER — Podcast",         "tag": "podcast",         "time": "18:00", "duration": 90,  "days": ["tue"] },
-    { "id": "r6", "title": "PLACEHOLDER — Game night",      "tag": "play",            "time": "19:30", "duration": 150, "days": ["fri", "sat"] }
+    { "id": "r1", "title": "Sleep",           "tag": "sleep",           "time": "22:45", "duration": 465, "days": "daily" },
+    { "id": "r2", "title": "Morning routine", "tag": "morning routine", "time": "06:30", "duration": 60,  "days": "daily" },
+    { "id": "r3", "title": "Dog walk",        "tag": "dogs",            "time": "07:45", "duration": 45,  "days": "daily" },
+    { "id": "r4", "title": "Deep work",       "tag": "work",            "time": "09:00", "duration": 180, "days": "weekdays" },
+    { "id": "r5", "title": "Lunch",           "tag": "personal",        "time": "12:30", "duration": 45,  "days": "daily" },
+    { "id": "r6", "title": "Afternoon block", "tag": "work",            "time": "13:30", "duration": 180, "days": "weekdays" },
+    { "id": "r7", "title": "Podcast",         "tag": "podcast",         "time": "16:30", "duration": 90,  "days": ["tue", "thu"] },
+    { "id": "r8", "title": "Evening walk",    "tag": "dogs",            "time": "18:30", "duration": 40,  "days": "daily" },
+    { "id": "r9", "title": "Game night",      "tag": "play",            "time": "19:30", "duration": 150, "days": ["fri", "sat"] }
   ],
   "milestones": [
-    { "id": "m1", "title": "PLACEHOLDER — Milestone one",   "date": "2026-10-31" },
-    { "id": "m2", "title": "PLACEHOLDER — Milestone two",   "date": "2026-12-25" },
-    { "id": "m3", "title": "PLACEHOLDER — Milestone three", "date": "2027-03-14" }
+    { "id": "m1", "title": "Conference talk", "date": "2026-10-15" },
+    { "id": "m2", "title": "Vacation",        "date": "2026-11-20" },
+    { "id": "m3", "title": "Product launch",  "date": "2026-12-05" },
+    { "id": "m4", "title": "Anniversary",     "date": "2027-01-18" },
+    { "id": "m5", "title": "Half marathon",   "date": "2027-03-07" },
+    { "id": "m6", "title": "Cabin trip",      "date": "2027-06-12" }
   ]
 }
 </script>
@@ -688,18 +702,32 @@
     return blocks;
   }
 
-  // Side-by-side lanes for blocks whose times overlap.
+  // Side-by-side lanes for blocks whose times overlap. Lanes are counted per
+  // cluster of overlapping blocks, not per day, so one overlapping task does
+  // not squeeze the whole column to half width.
   function assignLanes(events) {
+    var cluster = [];
     var lanes = [];
+    var clusterEnd = -1;
+
+    function flush() {
+      var total = Math.max(1, lanes.length);
+      cluster.forEach(function (ev) { ev.lanes = total; });
+      cluster = [];
+      lanes = [];
+      clusterEnd = -1;
+    }
+
     events.forEach(function (ev) {
-      var end = ev.start + ev.duration;
+      if (ev.start >= clusterEnd) flush();
       var lane = 0;
       while (lanes[lane] !== undefined && lanes[lane] > ev.start) lane++;
-      lanes[lane] = end;
+      lanes[lane] = ev.start + ev.duration;
       ev.lane = lane;
+      clusterEnd = Math.max(clusterEnd, ev.start + ev.duration);
+      cluster.push(ev);
     });
-    var total = Math.max(1, lanes.length);
-    events.forEach(function (ev) { ev.lanes = total; });
+    flush();
   }
 
   /* ---------- render: Today ---------- */
