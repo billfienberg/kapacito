@@ -525,9 +525,56 @@
 (function () {
   "use strict";
 
-  var DATA = JSON.parse(document.getElementById("kapacito-data").textContent);
+  var DATA = null;
   var DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   var MINUTES_PER_DAY = 1440;
+
+  /* ---------- loading data ----------
+     The committed sample data below is both a working demo for anyone who
+     clones this repo and the fallback for an unattended TV: if a real data
+     source is configured but unreachable or malformed, we fall back to it
+     rather than ever showing a blank screen. */
+
+  function loadSampleData() {
+    return JSON.parse(document.getElementById("kapacito-data").textContent);
+  }
+
+  // Real data is never committed to this public repo. Instead it's fetched
+  // at runtime from a URL passed as ?data=<url> on the page's own address
+  // (set once in Fully Kiosk's start-URL config, never in git). This is
+  // opacity, not security: anyone with the URL can read it.
+  function dataUrlParam() {
+    return new URLSearchParams(window.location.search).get("data");
+  }
+
+  function looksLikeKapacitoData(obj) {
+    return !!obj && typeof obj === "object" &&
+      (Array.isArray(obj.tasks) || Array.isArray(obj.recurring) || Array.isArray(obj.milestones));
+  }
+
+  function loadData(done) {
+    var url = dataUrlParam();
+    if (!url) { done(loadSampleData()); return; }
+
+    var controller = window.AbortController ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 6000) : null;
+
+    fetch(url, controller ? { signal: controller.signal } : {})
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (parsed) {
+        if (timer) clearTimeout(timer);
+        if (!looksLikeKapacitoData(parsed)) throw new Error("unexpected shape");
+        done(parsed);
+      })
+      .catch(function (err) {
+        if (timer) clearTimeout(timer);
+        console.warn("kapacito: falling back to sample data —", err);
+        done(loadSampleData());
+      });
+  }
 
   /* ---------- tags ---------- */
 
@@ -1008,13 +1055,17 @@
   window.addEventListener("resize", function () { fitStage(); alignHourRail(); });
 
   fitStage();
-  render();
 
-  // Tick on the minute so "today", the now-line and ages stay live for weeks.
-  setTimeout(function tick() {
+  loadData(function (data) {
+    DATA = data;
     render();
-    setTimeout(tick, 60000);
-  }, (60 - new Date().getSeconds()) * 1000);
+
+    // Tick on the minute so "today", the now-line and ages stay live for weeks.
+    setTimeout(function tick() {
+      render();
+      setTimeout(tick, 60000);
+    }, (60 - new Date().getSeconds()) * 1000);
+  });
 }());
 </script>
 </body>

@@ -1,14 +1,15 @@
 # Kapacito
 
 A static, single-page daily/weekly dashboard for an always-on TV (FireTV +
-Fully Kiosk Browser). No build step, no dependencies, no network calls — open
-`index.html` and it renders.
+Fully Kiosk Browser). No build step, no dependencies — open `index.html` and
+it renders.
 
 ## How it works
 
 - Everything is computed client-side from the inline JSON in
   `index.html` (`<script id="kapacito-data">`): `tasks`, `recurring`,
-  `milestones`.
+  `milestones`. This is generic sample/demo data — see "Real data" below for
+  how the TV loads Bill's actual schedule instead.
 - "Today" is read from the browser clock on every tick, so the page can run
   unattended for weeks and roll over at midnight on its own. No dates are
   hardcoded.
@@ -34,3 +35,23 @@ Reading is deliberately forgiving: `time` accepts `"09:30"`, `"9:30am"` or
 Tag colors: work-ish tags (work, podcast, dogs/walks, morning routine) get a
 steel-blue border, anything else gets terracotta, `sleep` stays neutral. The
 lists are `WORK_TAGS` / `NEUTRAL_TAGS` near the top of the script.
+
+## Real data
+
+This repo is public, so real personal data is never committed to it. Instead
+`index.html` accepts an optional `?data=<url>` query param: if present, it
+fetches that URL once at page load and expects the same JSON shape as the
+inline sample block (`tasks` / `recurring` / `milestones`). Any failure —
+missing param, network error, timeout, bad JSON, unexpected shape — falls
+back to the committed sample data and logs a `console.warn`, so an
+unattended TV never goes blank over a bad fetch.
+
+The real data lives in a secret (unlisted) GitHub Gist, and its raw URL is
+set once as the `?data=` param on Fully Kiosk's own start URL — never in a
+committed file. Because Fully Kiosk already has to reload the page to pick
+up a new push to this repo, the same reload re-fetches the gist too, so
+editing the gist is enough to update the TV.
+
+**This is opacity, not security.** The gist URL is a long unguessable string,
+not an authenticated endpoint — anyone with the URL can read it. Treat it
+like an unlisted link, not a password.
