@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kapacito</title>
+<style>
+  :root {
+    --bg: #f4f3f0;
+    --panel: #e7e4db;
+    --panel-2: #ded9c9;
+    --ink: #3a3324;
+    --ink-soft: #6b5f47;
+    --rule: #cfc9b8;
+    --work: #3d5a73;
+    --play: #c9793f;
+    --urgent: #b85c1e;
+    --dark: #2f2a1f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--dark);
+    color: var(--ink);
+    font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  /* The whole dashboard is authored at exactly 1920x1080 and scaled to fit
+     whatever the TV reports, so proportions never drift. */
+  #viewport {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #stage {
+    width: 1920px;
+    height: 1080px;
+    flex: none;
+    transform-origin: center center;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  /* ---------- Left: Today ---------- */
+
+  .today {
+    width: 520px;
+    flex: none;
+    background: var(--panel);
+    border-right: 2px solid var(--rule);
+    padding: 34px 32px 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .panel-title {
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .panel-sub {
+    margin-top: 10px;
+    font-size: 24px;
+    color: var(--ink-soft);
+    letter-spacing: 0.5px;
+  }
+
+  .today-list {
+    margin-top: 22px;
+    flex: 1 1 60%;
+    min-height: 0;
+    overflow: hidden;
+    font-size: 27px; /* shrunk to fit by fitToBox() */
+  }
+
+  .today-item {
+    display: flex;
+    gap: 0.6em;
+    align-items: baseline;
+    padding: 0.4em 0 0.4em 0.5em;
+    border-left: 8px solid transparent;
+  }
+
+  .today-item.work { border-left-color: var(--work); }
+  .today-item.play { border-left-color: var(--play); }
+  .today-item.neutral { border-left-color: var(--rule); }
+  .today-item.now { background: var(--panel-2); }
+
+  .today-time {
+    width: 4.4em;
+    flex: none;
+    font-size: 0.88em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+
+  .today-name {
+    font-size: 1em;
+    line-height: 1.2;
+  }
+
+  .divider {
+    margin: 18px 0 16px;
+    border-top: 2px solid var(--rule);
+  }
+
+  .section-label {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .unscheduled {
+    margin-top: 14px;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 42%;
+    overflow: hidden;
+    font-size: 25px; /* shrunk to fit by fitToBox() */
+  }
+
+  .unscheduled-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6em;
+    padding: 0.34em 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .unscheduled-item:last-child { border-bottom: 0; }
+
+  .unscheduled-name {
+    font-size: 1em;
+    line-height: 1.2;
+  }
+
+  .unscheduled-meta {
+    flex: none;
+    font-size: 0.8em;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .unscheduled-meta.due {
+    color: var(--urgent);
+    font-weight: 700;
+  }
+
+  .empty {
+    font-size: 22px;
+    color: var(--ink-soft);
+    padding: 10px 0;
+  }
+
+  /* ---------- Right: Week ---------- */
+
+  .week {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 34px 32px 20px;
+  }
+
+  .week-head {
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    margin-left: auto;
+    font-size: 21px;
+    color: var(--ink-soft);
+  }
+
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .swatch {
+    width: 26px;
+    height: 12px;
+    display: inline-block;
+  }
+
+  .swatch.work { background: var(--work); }
+  .swatch.play { background: var(--play); }
+
+  .clock {
+    font-size: 30px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+  }
+
+  .week-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    margin-top: 20px;
+  }
+
+  .hours {
+    width: 66px;
+    flex: none;
+    position: relative;
+  }
+
+  .hour-label {
+    position: absolute;
+    right: 12px;
+    transform: translateY(-50%);
+    font-size: 17px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .days {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+  }
+
+  .day {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--rule);
+  }
+
+  .day:last-child { border-right: 1px solid var(--rule); }
+
+  .day-head {
+    text-align: center;
+    padding: 6px 0 9px;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  .day-name {
+    font-size: 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .day-num {
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .day.is-today .day-head { background: var(--panel-2); }
+  .day.is-today .day-name,
+  .day.is-today .day-num { color: var(--ink); }
+
+  .allday {
+    min-height: 0;
+    padding: 0 3px;
+  }
+
+  .allday-chip {
+    margin: 3px 0;
+    padding: 3px 6px;
+    font-size: 16px;
+    line-height: 1.15;
+    background: var(--panel);
+    border-left: 5px solid var(--rule);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .allday-chip.work { border-left-color: var(--work); }
+  .allday-chip.play { border-left-color: var(--play); }
+
+  .grid {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .hour-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .hour-line.major { border-top-color: #bdb6a2; }
+
+  .now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 2px solid var(--urgent);
+    z-index: 3;
+  }
+
+  .block {
+    position: absolute;
+    overflow: hidden;
+    padding: 2px 5px;
+    background: var(--panel);
+    border-left: 5px solid var(--rule);
+    font-size: 16px;
+    line-height: 1.12;
+    z-index: 2;
+  }
+
+  .block.work { border-left-color: var(--work); }
+  .block.play { border-left-color: var(--play); }
+  .block.neutral { background: var(--panel-2); }
+
+  .block-time {
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .block-name {
+    font-weight: 500;
+  }
+
+  /* Anything under ~90 minutes is too short for two lines on a 24h grid. */
+  .block.short {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+    white-space: nowrap;
+    font-size: 15px;
+    padding-top: 1px;
+  }
+
+  .block.short .block-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------- Bottom: milestone ticker ---------- */
+
+  .ticker {
+    height: 208px;
+    flex: none;
+    background: var(--dark);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .track {
+    display: flex;
+    gap: 26px;
+    padding: 24px 13px;
+    width: max-content;
+    animation: marquee linear infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .card {
+    width: 372px;
+    height: 160px;
+    flex: none;
+    background: #3a3324;
+    color: #f4f3f0;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-days {
+    font-size: 58px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  .card-days small {
+    font-size: 24px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    color: #c9c1ab;
+    margin-left: 10px;
+  }
+
+  .card-title {
+    font-size: 25px;
+    line-height: 1.2;
+    color: #ded9c9;
+  }
+
+  .card-date {
+    font-size: 19px;
+    color: #9a907a;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+
+<div id="viewport"><div id="stage">
+  <div class="main">
+    <section class="today">
+      <div class="panel-title">Today</div>
+      <div class="panel-sub" id="today-date"></div>
+      <div class="today-list" id="today-list"></div>
+      <div class="divider"></div>
+      <div class="section-label">Unscheduled</div>
+      <div class="unscheduled" id="unscheduled"></div>
+    </section>
+
+    <section class="week">
+      <div class="week-head">
+        <div class="panel-title">Week</div>
+        <div class="legend">
+          <span><i class="swatch work"></i>Work</span>
+          <span><i class="swatch play"></i>Play</span>
+          <span class="clock" id="clock"></span>
+        </div>
+      </div>
+      <div class="week-body">
+        <div class="hours" id="hours"></div>
+        <div class="days" id="days"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="ticker"><div class="track" id="track"></div></div>
+</div></div>
+
+<!-- ===================================================================
+     DATA. Everything on screen is computed from these three arrays.
+     Replace the contents with the real tasks / recurring / milestones.
+     =================================================================== -->
+<script id="kapacito-data" type="application/json">
+{
+  "tasks": [
+    { "id": "t1", "title": "PLACEHOLDER — sample scheduled task", "tag": "work",    "date": null, "time": "13:00", "duration": 60, "dueDate": null, "createdAt": "2026-09-10T09:00:00Z" },
+    { "id": "t2", "title": "PLACEHOLDER — task with a due date",   "tag": "personal","date": null, "time": null,    "duration": null, "dueDate": "2026-09-29", "createdAt": "2026-09-12T09:00:00Z" },
+    { "id": "t3", "title": "PLACEHOLDER — aging backlog task",     "tag": "work",    "date": null, "time": null,    "duration": null, "dueDate": null, "createdAt": "2026-08-14T09:00:00Z" },
+    { "id": "t4", "title": "PLACEHOLDER — one-off later this week","tag": "podcast", "date": null, "time": "16:00", "duration": 90, "dueDate": null, "createdAt": "2026-09-20T09:00:00Z" }
+  ],
+  "recurring": [
+    { "id": "r1", "title": "PLACEHOLDER — Sleep",           "tag": "sleep",           "time": "23:00", "duration": 450, "days": "daily" },
+    { "id": "r2", "title": "PLACEHOLDER — Morning routine", "tag": "morning routine", "time": "07:00", "duration": 60,  "days": "daily" },
+    { "id": "r3", "title": "PLACEHOLDER — Dog walk",        "tag": "dogs",            "time": "08:15", "duration": 45,  "days": "daily" },
+    { "id": "r4", "title": "PLACEHOLDER — Work block",      "tag": "work",            "time": "09:30", "duration": 240, "days": "weekdays" },
+    { "id": "r5", "title": "PLACEHOLDER — Podcast",         "tag": "podcast",         "time": "18:00", "duration": 90,  "days": ["tue"] },
+    { "id": "r6", "title": "PLACEHOLDER — Game night",      "tag": "play",            "time": "19:30", "duration": 150, "days": ["fri", "sat"] }
+  ],
+  "milestones": [
+    { "id": "m1", "title": "PLACEHOLDER — Milestone one",   "date": "2026-10-31" },
+    { "id": "m2", "title": "PLACEHOLDER — Milestone two",   "date": "2026-12-25" },
+    { "id": "m3", "title": "PLACEHOLDER — Milestone three", "date": "2027-03-14" }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById("kapacito-data").textContent);
+  var DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var MINUTES_PER_DAY = 1440;
+
+  /* ---------- tags ---------- */
+
+  var WORK_TAGS = ["work", "podcast", "dog", "dogs", "walk", "walks", "morning routine", "morning", "routine", "admin", "errand", "errands"];
+  var NEUTRAL_TAGS = ["sleep"];
+
+  function tagClass(tag) {
+    var t = String(tag || "").toLowerCase().trim();
+    if (NEUTRAL_TAGS.indexOf(t) !== -1) return "neutral";
+    for (var i = 0; i < WORK_TAGS.length; i++) {
+      var w = WORK_TAGS[i];
+      if (t === w || t.indexOf(w) !== -1) return "work";
+    }
+    return t ? "play" : "neutral";
+  }
+
+  /* ---------- dates & times ---------- */
+
+  function parseDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return startOfDay(value);
+    var s = String(value);
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]); // local, never UTC-shifted
+    var d = new Date(s);
+    return isNaN(d) ? null : startOfDay(d);
+  }
+
+  function startOfDay(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function addDays(d, n) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  }
+
+  function isoDate(d) {
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function sameDay(a, b) {
+    return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function daysBetween(from, to) {
+    return Math.round((startOfDay(to) - startOfDay(from)) / 86400000);
+  }
+
+  // "09:30", "9:30am", "7 PM", 930, 9.5 -> minutes from midnight
+  function parseMinutes(value) {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "number") return value > 24 ? value : Math.round(value * 60);
+    var s = String(value).trim().toLowerCase();
+    var m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+    if (!m) return null;
+    var h = +m[1];
+    var min = m[2] ? +m[2] : 0;
+    if (m[3] === "pm" && h < 12) h += 12;
+    if (m[3] === "am" && h === 12) h = 0;
+    return h * 60 + min;
+  }
+
+  function formatTime(minutes) {
+    var h = Math.floor(minutes / 60) % 24;
+    var m = minutes % 60;
+    var suffix = h >= 12 ? "pm" : "am";
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + (m ? ":" + String(m).padStart(2, "0") : "") + suffix;
+  }
+
+  /* ---------- reading loosely-shaped records ---------- */
+
+  function pick(obj) {
+    for (var i = 1; i < arguments.length; i++) {
+      var key = arguments[i];
+      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
+    }
+    return null;
+  }
+
+  function startMinutes(item) {
+    return parseMinutes(pick(item, "time", "startTime", "start", "scheduledTime"));
+  }
+
+  function durationMinutes(item, start) {
+    var explicit = pick(item, "duration", "durationMinutes", "minutes", "length");
+    if (explicit !== null) return Math.max(15, Number(explicit) || 60);
+    var end = parseMinutes(pick(item, "endTime", "end"));
+    if (end !== null && start !== null) {
+      var span = end - start;
+      if (span <= 0) span += MINUTES_PER_DAY;
+      return Math.max(15, span);
+    }
+    return 60;
+  }
+
+  // Accepts: "daily", "weekdays", "weekends", "mon", [0,3], ["Tue","thu"], {mon:true}
+  function recurringDays(item) {
+    var raw = pick(item, "days", "daysOfWeek", "dayOfWeek", "day", "weekdays", "repeat", "frequency");
+    var all = [0, 1, 2, 3, 4, 5, 6];
+    if (raw === null) return all;
+
+    if (typeof raw === "object" && !Array.isArray(raw)) {
+      raw = Object.keys(raw).filter(function (k) { return raw[k]; });
+    }
+
+    var list = Array.isArray(raw) ? raw : [raw];
+    var out = [];
+
+    list.forEach(function (entry) {
+      if (typeof entry === "number") {
+        if (entry >= 0 && entry <= 6) out.push(entry);
+        return;
+      }
+      var s = String(entry).toLowerCase().trim();
+      if (s === "daily" || s === "everyday" || s === "every day" || s === "all") {
+        out = out.concat(all);
+      } else if (s === "weekdays" || s === "weekday") {
+        out = out.concat([1, 2, 3, 4, 5]);
+      } else if (s === "weekends" || s === "weekend") {
+        out = out.concat([0, 6]);
+      } else if (/^\d$/.test(s)) {
+        out.push(+s);
+      } else {
+        var idx = DAY_NAMES.findIndex(function (n) { return s.indexOf(n.toLowerCase()) === 0; });
+        if (idx !== -1) out.push(idx);
+      }
+    });
+
+    out = out.filter(function (v, i) { return out.indexOf(v) === i; });
+    return out.length ? out.sort() : all;
+  }
+
+  function isDone(item) {
+    return item.completed === true || item.done === true || item.status === "done" || item.status === "completed";
+  }
+
+  /* ---------- event model ---------- */
+
+  function makeEvent(source, date) {
+    var start = startMinutes(source);
+    return {
+      title: pick(source, "title", "name", "text") || "Untitled",
+      tag: pick(source, "tag", "category", "label") || "",
+      date: date,
+      start: start,
+      duration: start === null ? null : durationMinutes(source, start)
+    };
+  }
+
+  // Every event landing on a given day, recurring expanded + one-off tasks.
+  function eventsFor(date) {
+    var dow = date.getDay();
+    var events = [];
+
+    (DATA.recurring || []).forEach(function (r) {
+      if (recurringDays(r).indexOf(dow) !== -1) events.push(makeEvent(r, date));
+    });
+
+    (DATA.tasks || []).forEach(function (t) {
+      if (isDone(t)) return;
+      var d = parseDate(pick(t, "date", "scheduledDate", "day"));
+      if (d && sameDay(d, date)) events.push(makeEvent(t, date));
+    });
+
+    events.sort(function (a, b) {
+      if (a.start === null) return 1;
+      if (b.start === null) return -1;
+      return a.start - b.start;
+    });
+    return events;
+  }
+
+  // Timed blocks drawn on a day's midnight-to-midnight grid: the day's own
+  // events, plus the tail of anything that started yesterday and ran past
+  // midnight (sleep, mostly), so the overnight span isn't silently cut.
+  function timedBlocksFor(date) {
+    var blocks = eventsFor(date).filter(function (e) {
+      return e.start !== null;
+    }).map(function (e) {
+      return { title: e.title, tag: e.tag, start: e.start, duration: Math.min(e.duration, MINUTES_PER_DAY - e.start) };
+    });
+
+    eventsFor(addDays(date, -1)).forEach(function (e) {
+      if (e.start === null) return;
+      var spill = e.start + e.duration - MINUTES_PER_DAY;
+      if (spill > 0) blocks.push({ title: e.title, tag: e.tag, start: 0, duration: Math.min(spill, MINUTES_PER_DAY), wrapped: true });
+    });
+
+    blocks.sort(function (a, b) { return a.start - b.start; });
+    return blocks;
+  }
+
+  // Side-by-side lanes for blocks whose times overlap.
+  function assignLanes(events) {
+    var lanes = [];
+    events.forEach(function (ev) {
+      var end = ev.start + ev.duration;
+      var lane = 0;
+      while (lanes[lane] !== undefined && lanes[lane] > ev.start) lane++;
+      lanes[lane] = end;
+      ev.lane = lane;
+    });
+    var total = Math.max(1, lanes.length);
+    events.forEach(function (ev) { ev.lanes = total; });
+  }
+
+  /* ---------- render: Today ---------- */
+
+  function renderToday(now) {
+    var today = startOfDay(now);
+    var nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    document.getElementById("today-date").textContent =
+      now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+    var list = document.getElementById("today-list");
+    var events = eventsFor(today);
+    list.innerHTML = "";
+
+    if (!events.length) {
+      list.innerHTML = '<div class="empty">Nothing scheduled.</div>';
+    }
+
+    events.forEach(function (ev) {
+      var row = document.createElement("div");
+      var live = ev.start !== null && nowMinutes >= ev.start && nowMinutes < ev.start + ev.duration;
+      row.className = "today-item " + tagClass(ev.tag) + (live ? " now" : "");
+      row.innerHTML =
+        '<div class="today-time">' + (ev.start === null ? "&mdash;" : formatTime(ev.start)) + "</div>" +
+        '<div class="today-name"></div>';
+      row.lastChild.textContent = ev.title;
+      list.appendChild(row);
+    });
+
+    renderUnscheduled(today);
+  }
+
+  function renderUnscheduled(today) {
+    var box = document.getElementById("unscheduled");
+    var items = (DATA.tasks || []).filter(function (t) {
+      return !isDone(t) && !parseDate(pick(t, "date", "scheduledDate", "day"));
+    });
+
+    // Due-dated first, soonest due at the top; then oldest-created.
+    items.sort(function (a, b) {
+      var da = parseDate(a.dueDate), db = parseDate(b.dueDate);
+      if (da && db) return da - db;
+      if (da) return -1;
+      if (db) return 1;
+      return (parseDate(a.createdAt) || today) - (parseDate(b.createdAt) || today);
+    });
+
+    box.innerHTML = "";
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">Backlog is clear.</div>';
+      return;
+    }
+
+    items.forEach(function (t) {
+      var due = parseDate(pick(t, "dueDate", "due"));
+      var meta, urgent = false;
+
+      if (due) {
+        var days = daysBetween(today, due);
+        urgent = true;
+        meta = days < 0 ? Math.abs(days) + "d overdue"
+             : days === 0 ? "due today"
+             : days === 1 ? "due tomorrow"
+             : "due in " + days + "d";
+      } else {
+        var created = parseDate(pick(t, "createdAt", "created", "addedAt"));
+        var age = created ? daysBetween(created, today) : null;
+        meta = age === null ? "" : age <= 0 ? "new" : age + "d old";
+      }
+
+      var row = document.createElement("div");
+      row.className = "unscheduled-item";
+      row.innerHTML = '<div class="unscheduled-name"></div><div class="unscheduled-meta' + (urgent ? " due" : "") + '"></div>';
+      row.firstChild.textContent = pick(t, "title", "name", "text") || "Untitled";
+      row.lastChild.textContent = meta;
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------- render: Week ---------- */
+
+  function renderWeek(now) {
+    var today = startOfDay(now);
+    var weekStart = addDays(today, -today.getDay());
+
+    var hours = document.getElementById("hours");
+    hours.innerHTML = "";
+    for (var h = 0; h <= 24; h += 3) {
+      var label = document.createElement("div");
+      label.className = "hour-label";
+      label.style.top = (h / 24 * 100) + "%";
+      label.textContent = h === 0 ? "12a" : h === 24 ? "" : formatTime(h * 60);
+      hours.appendChild(label);
+    }
+    // Nudge the hour rail down so labels line up with the grid, not the headers.
+    hours.style.paddingTop = "0";
+
+    var days = document.getElementById("days");
+    days.innerHTML = "";
+
+    for (var i = 0; i < 7; i++) {
+      var date = addDays(weekStart, i);
+      var col = document.createElement("div");
+      col.className = "day" + (sameDay(date, today) ? " is-today" : "");
+
+      var head = document.createElement("div");
+      head.className = "day-head";
+      head.innerHTML = '<div class="day-name">' + DAY_NAMES[i] + '</div><div class="day-num">' + date.getDate() + "</div>";
+      col.appendChild(head);
+
+      var timed = timedBlocksFor(date);
+      var allday = eventsFor(date).filter(function (e) { return e.start === null; });
+
+      var adBox = document.createElement("div");
+      adBox.className = "allday";
+      allday.slice(0, 3).forEach(function (ev) {
+        var chip = document.createElement("div");
+        chip.className = "allday-chip " + tagClass(ev.tag);
+        chip.textContent = ev.title;
+        adBox.appendChild(chip);
+      });
+      col.appendChild(adBox);
+
+      var grid = document.createElement("div");
+      grid.className = "grid";
+
+      for (var hh = 0; hh <= 24; hh++) {
+        var line = document.createElement("div");
+        line.className = "hour-line" + (hh % 6 === 0 ? " major" : "");
+        line.style.top = (hh / 24 * 100) + "%";
+        grid.appendChild(line);
+      }
+
+      assignLanes(timed);
+      timed.forEach(function (ev) {
+        var block = document.createElement("div");
+        block.className = "block " + tagClass(ev.tag) + (ev.duration < 90 ? " short" : "");
+        block.style.top = (ev.start / MINUTES_PER_DAY * 100) + "%";
+        block.style.height = "calc(" + (ev.duration / MINUTES_PER_DAY * 100) + "% - 2px)";
+        block.style.left = "calc(" + (ev.lane / ev.lanes * 100) + "% + 2px)";
+        block.style.width = "calc(" + (100 / ev.lanes) + "% - 4px)";
+        block.innerHTML = '<div class="block-time"></div><div class="block-name"></div>';
+        block.firstChild.textContent = ev.wrapped ? "cont." : formatTime(ev.start);
+        block.lastChild.textContent = ev.title;
+        grid.appendChild(block);
+      });
+
+      if (sameDay(date, today)) {
+        var nowLine = document.createElement("div");
+        nowLine.className = "now-line";
+        nowLine.style.top = ((now.getHours() * 60 + now.getMinutes()) / MINUTES_PER_DAY * 100) + "%";
+        grid.appendChild(nowLine);
+      }
+
+      col.appendChild(grid);
+      days.appendChild(col);
+    }
+
+    alignHourRail();
+  }
+
+  // The hour labels sit in their own column; match them to the grid's box.
+  function alignHourRail() {
+    var grid = document.querySelector(".day .grid");
+    var body = document.querySelector(".week-body");
+    if (!grid || !body) return;
+    var offset = grid.getBoundingClientRect().top - body.getBoundingClientRect().top;
+    var scale = currentScale();
+    document.getElementById("hours").style.transform = "translateY(" + (offset / scale) + "px)";
+    document.getElementById("hours").style.height = (grid.getBoundingClientRect().height / scale) + "px";
+  }
+
+  /* ---------- render: milestone ticker ---------- */
+
+  function renderMilestones(now) {
+    var today = startOfDay(now);
+    var items = (DATA.milestones || []).map(function (m) {
+      var date = parseDate(pick(m, "date", "dueDate", "targetDate", "when"));
+      return {
+        title: pick(m, "title", "name", "text") || "Untitled",
+        date: date,
+        days: date ? daysBetween(today, date) : null
+      };
+    }).filter(function (m) {
+      return m.date !== null;
+    }).sort(function (a, b) {
+      return a.date - b.date;
+    });
+
+    var track = document.getElementById("track");
+    track.innerHTML = "";
+    if (!items.length) return;
+
+    function card(m) {
+      var el = document.createElement("div");
+      el.className = "card";
+      var count = m.days < 0 ? Math.abs(m.days) : m.days;
+      var unit = m.days < 0 ? "days ago" : m.days === 1 ? "day" : "days";
+      el.innerHTML =
+        '<div class="card-days">' + count + "<small>" + unit + "</small></div>" +
+        '<div><div class="card-title"></div><div class="card-date">' +
+        m.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "</div></div>";
+      el.querySelector(".card-title").textContent = m.title;
+      return el;
+    }
+
+    // Two identical runs, translated by exactly -50% -> seamless loop.
+    items.forEach(function (m) { track.appendChild(card(m)); });
+    items.forEach(function (m) { track.appendChild(card(m)); });
+    track.style.animationDuration = (items.length * 7) + "s";
+  }
+
+  // Shrink a list's type until it fits its box - the number of items on a
+  // given day is data-driven, and nothing may be cut off on an unattended TV.
+  function fitToBox(el, maxPx, minPx) {
+    var size = maxPx;
+    el.style.fontSize = size + "px";
+    while (el.scrollHeight > el.clientHeight && size > minPx) {
+      size -= 1;
+      el.style.fontSize = size + "px";
+    }
+  }
+
+  /* ---------- scaling & scheduling ---------- */
+
+  var scale = 1;
+
+  function currentScale() { return scale; }
+
+  function fitStage() {
+    scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.getElementById("stage").style.transform = "scale(" + scale + ")";
+  }
+
+  var lastRenderedDay = null;
+
+  function render() {
+    var now = new Date();
+    renderToday(now);
+    renderWeek(now);
+    fitToBox(document.getElementById("today-list"), 27, 15);
+    fitToBox(document.getElementById("unscheduled"), 25, 14);
+
+    var day = isoDate(now);
+    if (day !== lastRenderedDay) {
+      renderMilestones(now); // only re-rendered on rollover, so the marquee never restarts
+      lastRenderedDay = day;
+    }
+
+    document.getElementById("clock").textContent =
+      now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  window.addEventListener("resize", function () { fitStage(); alignHourRail(); });
+
+  fitStage();
+  render();
+
+  // Tick on the minute so "today", the now-line and ages stay live for weeks.
+  setTimeout(function tick() {
+    render();
+    setTimeout(tick, 60000);
+  }, (60 - new Date().getSeconds()) * 1000);
+}());
+</script>
+</body>
+</html>
