@@ -445,6 +445,17 @@
     color: #9a907a;
     font-variant-numeric: tabular-nums;
   }
+
+  .card-bar {
+    margin-top: 8px;
+    height: 6px;
+    background: rgba(244, 243, 240, 0.15);
+  }
+
+  .card-bar-fill {
+    height: 100%;
+    background: var(--work);
+  }
 </style>
 </head>
 <body>
@@ -517,7 +528,8 @@
     { "id": "m4", "title": "Anniversary",     "date": "2027-01-18" },
     { "id": "m5", "title": "Half marathon",   "date": "2027-03-07" },
     { "id": "m6", "title": "Cabin trip",      "date": "2027-06-12" }
-  ]
+  ],
+  "savings": { "label": "Savings goal", "target": 10000, "current": 2500 }
 }
 </script>
 
@@ -971,9 +983,39 @@
     document.getElementById("hours").style.height = (grid.getBoundingClientRect().height / scale) + "px";
   }
 
-  /* ---------- render: milestone ticker ---------- */
+  /* ---------- render: ticker (milestones + savings goal) ---------- */
 
-  function renderMilestones(now) {
+  function validSavings(s) {
+    return !!s && typeof s.target === "number" && s.target > 0 && typeof s.current === "number";
+  }
+
+  function savingsCard(s) {
+    var pct = Math.max(0, Math.min(100, (s.current / s.target) * 100));
+    var el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML =
+      '<div class="card-days">' + pct.toFixed(1) + "<small>%</small></div>" +
+      '<div><div class="card-title"></div><div class="card-date">$' +
+      Math.round(s.current).toLocaleString() + " of $" + Math.round(s.target).toLocaleString() +
+      '</div><div class="card-bar"><div class="card-bar-fill" style="width:' + pct + '%"></div></div></div>';
+    el.querySelector(".card-title").textContent = s.label || "Savings goal";
+    return el;
+  }
+
+  function milestoneCard(m) {
+    var el = document.createElement("div");
+    el.className = "card";
+    var count = m.days < 0 ? Math.abs(m.days) : m.days;
+    var unit = m.days < 0 ? "days ago" : m.days === 1 ? "day" : "days";
+    el.innerHTML =
+      '<div class="card-days">' + count + "<small>" + unit + "</small></div>" +
+      '<div><div class="card-title"></div><div class="card-date">' +
+      m.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "</div></div>";
+    el.querySelector(".card-title").textContent = m.title;
+    return el;
+  }
+
+  function renderTicker(now) {
     var today = startOfDay(now);
     var items = (DATA.milestones || []).map(function (m) {
       var date = parseDate(pick(m, "date", "dueDate", "targetDate", "when"));
@@ -988,27 +1030,21 @@
       return a.date - b.date;
     });
 
-    var track = document.getElementById("track");
-    track.innerHTML = "";
-    if (!items.length) return;
-
-    function card(m) {
-      var el = document.createElement("div");
-      el.className = "card";
-      var count = m.days < 0 ? Math.abs(m.days) : m.days;
-      var unit = m.days < 0 ? "days ago" : m.days === 1 ? "day" : "days";
-      el.innerHTML =
-        '<div class="card-days">' + count + "<small>" + unit + "</small></div>" +
-        '<div><div class="card-title"></div><div class="card-date">' +
-        m.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "</div></div>";
-      el.querySelector(".card-title").textContent = m.title;
-      return el;
+    // Builders, not built elements, since each of the two marquee runs
+    // needs its own fresh DOM nodes.
+    var builders = items.map(function (m) { return function () { return milestoneCard(m); }; });
+    if (validSavings(DATA.savings)) {
+      builders.unshift(function () { return savingsCard(DATA.savings); });
     }
 
+    var track = document.getElementById("track");
+    track.innerHTML = "";
+    if (!builders.length) return;
+
     // Two identical runs, translated by exactly -50% -> seamless loop.
-    items.forEach(function (m) { track.appendChild(card(m)); });
-    items.forEach(function (m) { track.appendChild(card(m)); });
-    track.style.animationDuration = (items.length * 7) + "s";
+    builders.forEach(function (b) { track.appendChild(b()); });
+    builders.forEach(function (b) { track.appendChild(b()); });
+    track.style.animationDuration = (builders.length * 7) + "s";
   }
 
   // Shrink a list's type until it fits its box - the number of items on a
@@ -1044,7 +1080,7 @@
 
     var day = isoDate(now);
     if (day !== lastRenderedDay) {
-      renderMilestones(now); // only re-rendered on rollover, so the marquee never restarts
+      renderTicker(now); // only re-rendered on rollover, so the marquee never restarts
       lastRenderedDay = day;
     }
 
