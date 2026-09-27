@@ -296,6 +296,13 @@
     line-height: 1.15;
   }
 
+  .day-weather {
+    font-size: 15px;
+    color: var(--ink-soft);
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
   .day.is-today .day-head { background: var(--panel-2); }
   .day.is-today .day-name,
   .day.is-today .day-num { color: var(--ink); }
@@ -521,7 +528,8 @@
   "finances": [
     { "id": "f1", "label": "Savings",       "amount": 2500,  "monthly": 500,   "asOf": "2026-09-01" },
     { "id": "f2", "label": "Lease balance", "amount": 50000, "monthly": -1500, "asOf": "2026-09-01" }
-  ]
+  ],
+  "location": { "lat": 41.8781, "lon": -87.6298 }
 }
 </script>
 
@@ -577,6 +585,55 @@
         if (timer) clearTimeout(timer);
         console.warn("kapacito: falling back to sample data —", err);
         done(loadSampleData());
+      });
+  }
+
+  /* ---------- weather ----------
+     A second, independent live fetch (Open-Meteo, free, no key) keyed off
+     DATA.location. Same resilience rule as the data loader: on any failure
+     just leave WEATHER empty so the day headers render with no indicator,
+     never a broken one. */
+
+  var WEATHER = {};
+
+  function weatherIcon(code) {
+    if (code === 0) return "☀️";
+    if (code === 1 || code === 2) return "⛅";
+    if (code === 3) return "☁️";
+    if (code === 45 || code === 48) return "🌫️";
+    if (code >= 51 && code <= 67) return "🌧️";
+    if (code >= 71 && code <= 77) return "🌨️";
+    if (code === 80 || code === 81 || code === 82) return "🌦️";
+    if (code === 85 || code === 86) return "🌨️";
+    if (code >= 95) return "⛈️";
+    return "";
+  }
+
+  function loadWeather(loc, done) {
+    if (!loc || typeof loc.lat !== "number" || typeof loc.lon !== "number") { done(); return; }
+
+    var controller = window.AbortController ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 6000) : null;
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
+      "&daily=weathercode,temperature_2m_max&temperature_unit=fahrenheit&timezone=auto&forecast_days=7";
+
+    fetch(url, controller ? { signal: controller.signal } : {})
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        if (timer) clearTimeout(timer);
+        var days = json.daily || {};
+        (days.time || []).forEach(function (date, i) {
+          WEATHER[date] = { code: days.weathercode[i], high: days.temperature_2m_max[i] };
+        });
+        done();
+      })
+      .catch(function (err) {
+        if (timer) clearTimeout(timer);
+        console.warn("kapacito: weather unavailable —", err);
+        done();
       });
   }
 
@@ -911,6 +968,13 @@
       var head = document.createElement("div");
       head.className = "day-head";
       head.innerHTML = '<div class="day-name">' + DAY_NAMES[date.getDay()] + '</div><div class="day-num">' + date.getDate() + "</div>";
+      var w = WEATHER[isoDate(date)];
+      if (w) {
+        var wEl = document.createElement("div");
+        wEl.className = "day-weather";
+        wEl.textContent = weatherIcon(w.code) + " " + Math.round(w.high) + "°";
+        head.appendChild(wEl);
+      }
       col.appendChild(head);
 
       var timed = timedBlocksFor(date);
@@ -1109,6 +1173,10 @@
       render();
       setTimeout(tick, 60000);
     }, (60 - new Date().getSeconds()) * 1000);
+
+    // Forecast arrives separately and later; re-render the week once it's
+    // in so headers pick up their icons without blocking first paint.
+    loadWeather(DATA.location, function () { renderWeek(new Date()); });
   });
 }());
 </script>

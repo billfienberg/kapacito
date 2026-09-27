@@ -8,8 +8,8 @@ it renders.
 
 - Everything is computed client-side from the inline JSON in
   `index.html` (`<script id="kapacito-data">`): `tasks`, `recurring`,
-  `milestones`, `finances`. This is generic sample/demo data — see "Real
-  data" below for how the TV loads Bill's actual schedule instead.
+  `milestones`, `finances`, `location`. This is generic sample/demo data —
+  see "Real data" below for how the TV loads Bill's actual schedule instead.
 - "Today" is read from the browser clock on every tick, so the page can run
   unattended for weeks and roll over at midnight on its own. No dates are
   hardcoded.
@@ -29,6 +29,7 @@ Edit the JSON block in `index.html` and push. The fields it reads:
 | `recurring`  | `title`, `tag`, `time`, `duration`, `days`                                       |
 | `milestones` | `title`, `date`                                                                  |
 | `finances`   | `label`, `amount`, `monthly`, `asOf` (`YYYY-MM-DD`) — each entry is a dollar figure projected forward from `amount` at `asOf` by `monthly` per month (prorated daily, not stepped monthly); a negative `monthly` (a balance being paid down) floors at $0. Shown as ticker cards, always first, before milestones. |
+| `location`   | a single object (not a list): `lat`, `lon` — if present, fetches a live 7-day forecast (see "Weather" below) and shows a small icon + high temp in each Week day header. |
 
 Reading is deliberately forgiving: `time` accepts `"09:30"`, `"9:30am"` or
 `"7 PM"`; `duration` can be replaced by `endTime`; `days` accepts `"daily"`,
@@ -37,6 +38,15 @@ Reading is deliberately forgiving: `time` accepts `"09:30"`, `"9:30am"` or
 Tag colors: work-ish tags (work, podcast, dogs/walks, morning routine) get a
 steel-blue border, anything else gets terracotta, `sleep` stays neutral. The
 lists are `WORK_TAGS` / `NEUTRAL_TAGS` near the top of the script.
+
+## Weather
+
+If `location` (`lat`/`lon`) is set, `index.html` makes one more live fetch —
+to [Open-Meteo](https://open-meteo.com) (free, no API key) — for a 7-day
+forecast, once at page load, and shows a small icon + high temp in each
+Week-view day header. Same resilience rule as the data fetch: any failure
+(no location configured, network error, timeout, bad response) just means no
+weather indicator is shown — it never blocks or breaks the rest of the page.
 
 ## Real data
 
