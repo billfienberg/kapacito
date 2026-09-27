@@ -445,17 +445,6 @@
     color: #9a907a;
     font-variant-numeric: tabular-nums;
   }
-
-  .card-bar {
-    margin-top: 8px;
-    height: 6px;
-    background: rgba(244, 243, 240, 0.15);
-  }
-
-  .card-bar-fill {
-    height: 100%;
-    background: var(--work);
-  }
 </style>
 </head>
 <body>
@@ -529,7 +518,10 @@
     { "id": "m5", "title": "Half marathon",   "date": "2027-03-07" },
     { "id": "m6", "title": "Cabin trip",      "date": "2027-06-12" }
   ],
-  "savings": { "label": "Savings goal", "target": 10000, "current": 2500 }
+  "finances": [
+    { "id": "f1", "label": "Savings",       "amount": 2500,  "monthly": 500,   "asOf": "2026-09-01" },
+    { "id": "f2", "label": "Lease balance", "amount": 50000, "monthly": -1500, "asOf": "2026-09-01" }
+  ]
 }
 </script>
 
@@ -983,22 +975,33 @@
     document.getElementById("hours").style.height = (grid.getBoundingClientRect().height / scale) + "px";
   }
 
-  /* ---------- render: ticker (milestones + savings goal) ---------- */
+  /* ---------- render: ticker (finances + milestones) ---------- */
 
-  function validSavings(s) {
-    return !!s && typeof s.target === "number" && s.target > 0 && typeof s.current === "number";
+  function validFinance(f) {
+    return !!f && typeof f.amount === "number" && typeof f.monthly === "number" &&
+      !!parseDate(pick(f, "asOf", "date"));
   }
 
-  function savingsCard(s) {
-    var pct = Math.max(0, Math.min(100, (s.current / s.target) * 100));
+  // Linear day-proration from a known anchor, not calendar-month stepping,
+  // so the figure visibly moves a little every day instead of jumping once
+  // a month. A negative monthly rate (a balance being paid down) floors at
+  // zero; a positive one (savings) is left uncapped.
+  function projectedAmount(f, today) {
+    var anchor = parseDate(pick(f, "asOf", "date"));
+    var value = f.amount + (f.monthly / 30) * daysBetween(anchor, today);
+    return f.monthly < 0 ? Math.max(0, value) : value;
+  }
+
+  function financeCard(f, today) {
+    var value = projectedAmount(f, today);
+    var sign = f.monthly > 0 ? "+" : f.monthly < 0 ? "−" : "";
     var el = document.createElement("div");
     el.className = "card";
     el.innerHTML =
-      '<div class="card-days">' + pct.toFixed(1) + "<small>%</small></div>" +
-      '<div><div class="card-title"></div><div class="card-date">$' +
-      Math.round(s.current).toLocaleString() + " of $" + Math.round(s.target).toLocaleString() +
-      '</div><div class="card-bar"><div class="card-bar-fill" style="width:' + pct + '%"></div></div></div>';
-    el.querySelector(".card-title").textContent = s.label || "Savings goal";
+      '<div class="card-days">$' + Math.round(value).toLocaleString() + "</div>" +
+      '<div><div class="card-title"></div><div class="card-date">' +
+      sign + "$" + Math.abs(Math.round(f.monthly)).toLocaleString() + "/mo</div></div>";
+    el.querySelector(".card-title").textContent = pick(f, "label", "title", "name") || "Balance";
     return el;
   }
 
@@ -1032,10 +1035,11 @@
 
     // Builders, not built elements, since each of the two marquee runs
     // needs its own fresh DOM nodes.
-    var builders = items.map(function (m) { return function () { return milestoneCard(m); }; });
-    if (validSavings(DATA.savings)) {
-      builders.unshift(function () { return savingsCard(DATA.savings); });
-    }
+    var financeBuilders = (DATA.finances || []).filter(validFinance).map(function (f) {
+      return function () { return financeCard(f, today); };
+    });
+    var milestoneBuilders = items.map(function (m) { return function () { return milestoneCard(m); }; });
+    var builders = financeBuilders.concat(milestoneBuilders);
 
     var track = document.getElementById("track");
     track.innerHTML = "";

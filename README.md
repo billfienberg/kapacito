@@ -8,7 +8,7 @@ it renders.
 
 - Everything is computed client-side from the inline JSON in
   `index.html` (`<script id="kapacito-data">`): `tasks`, `recurring`,
-  `milestones`, `savings`. This is generic sample/demo data — see "Real
+  `milestones`, `finances`. This is generic sample/demo data — see "Real
   data" below for how the TV loads Bill's actual schedule instead.
 - "Today" is read from the browser clock on every tick, so the page can run
   unattended for weeks and roll over at midnight on its own. No dates are
@@ -16,8 +16,8 @@ it renders.
 - The layout is authored at exactly 1920x1080 and CSS-scaled to fit whatever
   the display reports, so proportions hold on any screen.
 - It re-renders on the minute (clock, now-line, task ages, day rollover). The
-  bottom ticker (milestones + savings goal) is only rebuilt on a day
-  rollover so the loop never jumps.
+  bottom ticker (finances + milestones) is only rebuilt on a day rollover so
+  the loop never jumps.
 
 ## Updating the data
 
@@ -28,7 +28,7 @@ Edit the JSON block in `index.html` and push. The fields it reads:
 | `tasks`      | `title`, `tag`, `date` (`YYYY-MM-DD` or `null`), `time`, `duration`, `dueDate`, `createdAt`, `completed` |
 | `recurring`  | `title`, `tag`, `time`, `duration`, `days`                                       |
 | `milestones` | `title`, `date`                                                                  |
-| `savings`    | a single object (not a list): `label`, `target`, `current` — shows as a percent-complete card in the ticker, always first |
+| `finances`   | `label`, `amount`, `monthly`, `asOf` (`YYYY-MM-DD`) — each entry is a dollar figure projected forward from `amount` at `asOf` by `monthly` per month (prorated daily, not stepped monthly); a negative `monthly` (a balance being paid down) floors at $0. Shown as ticker cards, always first, before milestones. |
 
 Reading is deliberately forgiving: `time` accepts `"09:30"`, `"9:30am"` or
 `"7 PM"`; `duration` can be replaced by `endTime`; `days` accepts `"daily"`,
