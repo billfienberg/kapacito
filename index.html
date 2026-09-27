@@ -977,6 +977,10 @@
 
   /* ---------- render: ticker (finances + milestones) ---------- */
 
+  // Fixed loop duration for one marquee cycle, independent of card count
+  // (25% faster than the prior per-card-scaled 63s baseline at 9 cards).
+  var TICKER_SECONDS = 50.4;
+
   function validFinance(f) {
     return !!f && typeof f.amount === "number" && typeof f.monthly === "number" &&
       !!parseDate(pick(f, "asOf", "date"));
@@ -1048,7 +1052,7 @@
     // Two identical runs, translated by exactly -50% -> seamless loop.
     builders.forEach(function (b) { track.appendChild(b()); });
     builders.forEach(function (b) { track.appendChild(b()); });
-    track.style.animationDuration = (builders.length * 7) + "s";
+    track.style.animationDuration = TICKER_SECONDS + "s";
   }
 
   // Shrink a list's type until it fits its box - the number of items on a
